@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#define STATES 5
+#define STATES 7
 #define RADIUS 1
 #define SCREEN_W 1200
 #define SCREEN_H 800
@@ -37,14 +37,12 @@ int compute(int* mnca, int** counts, int width, int height){
             for(int s = 0; s < STATES; s++){
                 ps[s] = (float)counts[s][i * width + j] / ((2 * radius + 1) * (2 * radius + 1));
             }
-            if(ps[(mnca[i * width + j] + 1) % STATES] > 0.20){
-                mnca[i * width + j] = (mnca[i * width + j] + 1) % STATES;
-                continue;
-            }
-            if(ps[(mnca[i * width + j] + 2) % STATES] > 0.20){
-                mnca[i * width + j] = (mnca[i * width + j] + 2) % STATES;
-                continue;
-            }
+            for(int s = 1; s <= STATES / 2; s++){
+                if(ps[(mnca[i * width + j] + s) % STATES] > 0.21){
+                    mnca[i * width + j] = (mnca[i * width + j] + s) % STATES;
+                    break;
+                }
+            }   
         }
     }
 }
