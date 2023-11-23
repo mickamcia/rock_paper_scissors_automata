@@ -6,10 +6,13 @@
 
 #define STATES 7
 #define RADIUS 1
-#define SCREEN_W 1200
-#define SCREEN_H 800
+#define SCREEN_W 300
+#define SCREEN_H 200
 #define GRID_W 300
 #define GRID_H 200
+#define THRESHOLD 0.21f
+
+#define SAVE_VIDEO
 
 int compute(int* mnca, int** counts, int width, int height){
     const int radius = RADIUS;
@@ -18,10 +21,6 @@ int compute(int* mnca, int** counts, int width, int height){
             for(int s = 0; s < STATES; s++){
                 counts[s][i * width + j] = 0;
             }
-        }
-    }
-    for(int i = 0; i < height; i++){
-        for(int j = 0; j < width; j++){
             for(int ii = -radius; ii <= radius; ii++){
                 for(int jj = -radius; jj <= radius; jj++){
                     const int i_index = (i + ii + height) % height;
@@ -38,7 +37,7 @@ int compute(int* mnca, int** counts, int width, int height){
                 ps[s] = (float)counts[s][i * width + j] / ((2 * radius + 1) * (2 * radius + 1));
             }
             for(int s = 1; s <= STATES / 2; s++){
-                if(ps[(mnca[i * width + j] + s) % STATES] > 0.21){
+                if(ps[(mnca[i * width + j] + s) % STATES] > THRESHOLD){
                     mnca[i * width + j] = (mnca[i * width + j] + s) % STATES;
                     break;
                 }
@@ -95,7 +94,11 @@ int main() {
         colors[i][1] = rand() % 256;
         colors[i][2] = rand() % 256;
     }
-
+    int frame = 0;
+#ifdef SAVE_VIDEO
+    //FILE *ffmpeg = popen("ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 300x200 -framerate 30 -i - -c:v rawvideo -pix_fmt bgr24 -vf 'pad=ceil(iw/2)*2:ceil(ih/2)*2' output.avi", "w");
+    FILE *ffmpeg = popen("ffmpeg -y -f rawvideo -pixel_format rgb24 -video_size 300x200 -framerate 15 -i - -c:v libx264 -pix_fmt yuv420p -vf 'pad=ceil(iw/2)*2:ceil(ih/2)*2' output.mp4", "w");
+#endif   
     while (!glfwWindowShouldClose(window)) {
         compute(mnca, counts, width, height);
         for (int i = 0; i < width * height; i++) {
@@ -103,6 +106,13 @@ int main() {
             tex_data[3 * i + 1] = colors[mnca[i]][1];
             tex_data[3 * i + 2] = colors[mnca[i]][2];
         }
+#ifdef SAVE_VIDEO
+        if((frame % 5) == 0)
+        {
+            fwrite(tex_data, sizeof(uint8_t), width * height * 3, ffmpeg);
+        }
+#endif
+        frame++;
         glClear(GL_COLOR_BUFFER_BIT);
         glEnable(GL_TEXTURE_2D);
         glBindTexture(GL_TEXTURE_2D, texture);
@@ -134,5 +144,8 @@ int main() {
     for(int s = 0; s < STATES; s++){
         free(counts[s]);
     }
+#ifdef SAVE_VIDEO
+    pclose(ffmpeg);
+#endif
     return 0;
 }
